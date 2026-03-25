@@ -14,7 +14,7 @@ interface IncomingMessage {
 @WebSocketGateway({ path: '/' })
 export class PriceGateway implements OnGatewayDisconnect {
   @WebSocketServer()
-  server: Server;
+  server!: Server;
 
   constructor(private readonly priceService: PriceService) {}
 

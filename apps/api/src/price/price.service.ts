@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { WebSocket } from 'ws';
+import { CacheService, TTL } from '../cache/cache.service';
 
 export interface PriceEvent {
   poolId: string;
@@ -11,10 +12,10 @@ export interface PriceEvent {
 
 @Injectable()
 export class PriceService {
-  // poolId -> Set of subscribed clients
   private subscriptions = new Map<string, Set<WebSocket>>();
-  // client -> Set of subscribed poolIds (for cleanup on disconnect)
   private clientPools = new Map<WebSocket, Set<string>>();
+
+  constructor(private readonly cache: CacheService) {}
 
   subscribe(client: WebSocket, poolId: string): void {
     if (!this.subscriptions.has(poolId)) {
@@ -43,7 +44,18 @@ export class PriceService {
     }
   }
 
+  async getSpotPrice(poolId: string): Promise<PriceEvent | null> {
+    const key = `price:spot:${poolId}`;
+    const cached = await this.cache.get<PriceEvent>(key);
+    if (cached) return cached;
+    // TODO: fetch from DB/RPC and populate
+    return null;
+  }
+
   broadcastPrice(event: PriceEvent): void {
+    const key = `price:spot:${event.poolId}`;
+    void this.cache.set(key, event, TTL.SPOT_PRICE);
+
     const clients = this.subscriptions.get(event.poolId);
     if (!clients?.size) return;
 

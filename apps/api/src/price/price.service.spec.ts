@@ -1,7 +1,8 @@
 import { PriceService, PriceEvent } from './price.service';
+import { CacheService } from '../cache/cache.service';
 import { WebSocket } from 'ws';
 
-function mockClient(readyState = WebSocket.OPEN): WebSocket {
+function mockClient(readyState: number = WebSocket.OPEN): WebSocket {
   return { readyState, send: jest.fn() } as unknown as WebSocket;
 }
 
@@ -9,7 +10,11 @@ describe('PriceService', () => {
   let service: PriceService;
 
   beforeEach(() => {
-    service = new PriceService();
+    const mockCache = {
+      get: jest.fn().mockResolvedValue(null),
+      set: jest.fn().mockResolvedValue(undefined),
+    } as unknown as CacheService;
+    service = new PriceService(mockCache);
   });
 
   const event: PriceEvent = {
