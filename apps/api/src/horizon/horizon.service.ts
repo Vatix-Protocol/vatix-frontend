@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Horizon } from '@stellar/stellar-sdk';
 import { PriceService, PriceEvent } from '../price/price.service';
+import { PoolsService } from '../pools/pools.service';
 
 @Injectable()
 export class HorizonService implements OnModuleInit, OnModuleDestroy {
@@ -15,7 +16,10 @@ export class HorizonService implements OnModuleInit, OnModuleDestroy {
   private cursor = 'now';
   private timer: NodeJS.Timeout | null = null;
 
-  constructor(private readonly priceService: PriceService) {
+  constructor(
+    private readonly priceService: PriceService,
+    private readonly poolsService: PoolsService,
+  ) {
     this.server = new Horizon.Server(
       process.env.HORIZON_URL ?? 'https://horizon-testnet.stellar.org',
     );
@@ -48,7 +52,10 @@ export class HorizonService implements OnModuleInit, OnModuleDestroy {
       for (const record of page.records) {
         this.cursor = record.paging_token;
         const event = this.toPrice(record as unknown as EffectRecord);
-        if (event) this.priceService.broadcastPrice(event);
+        if (event) {
+          this.priceService.broadcastPrice(event);
+          void this.poolsService.handlePoolStateUpdate(event.poolId);
+        }
       }
     } catch (err) {
       this.logger.warn(`Horizon poll error: ${(err as Error).message}`);
