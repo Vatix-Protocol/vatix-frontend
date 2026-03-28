@@ -1,4 +1,10 @@
-import { PriceService, PriceEvent } from './price.service';
+import { NotFoundException } from '@nestjs/common';
+import {
+  PriceService,
+  PriceEvent,
+  normalizePair,
+  spotPriceCacheKey,
+} from './price.service';
 import { CacheService } from '../cache/cache.service';
 import { WebSocket } from 'ws';
 
@@ -12,13 +18,15 @@ function mockClient(
 
 describe('PriceService', () => {
   let service: PriceService;
+  let mockCache: jest.Mocked<Pick<CacheService, 'get' | 'set' | 'invalidate'>>;
 
   beforeEach(() => {
-    const mockCache = {
+    mockCache = {
       get: jest.fn().mockResolvedValue(null),
       set: jest.fn().mockResolvedValue(undefined),
-    } as unknown as CacheService;
-    service = new PriceService(mockCache);
+      invalidate: jest.fn().mockResolvedValue(undefined),
+    };
+    service = new PriceService(mockCache as unknown as CacheService);
   });
 
   const event: PriceEvent = {
@@ -80,5 +88,59 @@ describe('PriceService', () => {
     service.subscribe(client, 'pool-1');
     service.broadcastPrice(event);
     expect(client.send as jest.Mock).not.toHaveBeenCalled();
+  });
+
+  describe('normalizePair', () => {
+    it('returns tokens in lexicographic order', () => {
+      expect(normalizePair('XLM', 'USDC')).toEqual(['usdc', 'xlm']);
+      expect(normalizePair('USDC', 'XLM')).toEqual(['usdc', 'xlm']);
+    });
+
+    it('lowercases both tokens', () => {
+      expect(normalizePair('ABC', 'DEF')).toEqual(['abc', 'def']);
+    });
+  });
+
+  describe('spotPriceCacheKey', () => {
+    it('produces the same key regardless of token order', () => {
+      expect(spotPriceCacheKey('XLM', 'USDC')).toBe(
+        spotPriceCacheKey('USDC', 'XLM'),
+      );
+    });
+  });
+
+  describe('getTokenPairPrice', () => {
+    it('returns cached response when available', async () => {
+      const cached = {
+        tokenA: 'usdc',
+        tokenB: 'xlm',
+        spotPrice: '0.1',
+        change24hAbsolute: '0',
+        change24hPercent: '0.0000',
+        high24h: '0.1',
+        low24h: '0.1',
+        lastUpdated: new Date().toISOString(),
+      };
+      mockCache.get.mockResolvedValueOnce(cached);
+      const result = await service.getTokenPairPrice('USDC', 'XLM');
+      expect(result).toEqual(cached);
+      expect(mockCache.set).not.toHaveBeenCalled();
+    });
+
+    it('throws NotFoundException when no pool data exists', async () => {
+      mockCache.get.mockResolvedValue(null);
+      await expect(service.getTokenPairPrice('USDC', 'XLM')).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  });
+
+  describe('invalidatePairCache', () => {
+    it('calls cache.invalidate with the normalized key', async () => {
+      await service.invalidatePairCache('XLM', 'USDC');
+      expect(mockCache.invalidate).toHaveBeenCalledWith(
+        spotPriceCacheKey('XLM', 'USDC'),
+      );
+    });
   });
 });
