@@ -60,7 +60,6 @@ export class HorizonService implements OnModuleInit, OnModuleDestroy {
         await this.poolsService.handlePoolStateUpdate(event.poolId, {
           currentPrice: event.currentPrice,
         });
-        
         if (event) {
           await this.cache.publish(
             `prices:${event.poolId}`,

@@ -22,7 +22,6 @@ interface PoolsListResponse {
   orderBy: PoolOrderBy;
   search?: string;
 }
-
 export interface PoolDetail {
   id: string;
   token0: {
