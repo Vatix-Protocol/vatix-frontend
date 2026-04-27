@@ -96,3 +96,40 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+---
+
+## Disaster Recovery
+
+The PostgreSQL database is backed up daily at 02:00 UTC via GitHub Actions and stored in an S3-compatible bucket as compressed `.sql.gz` files. The last 30 daily backups are retained automatically.
+
+### Required environment variables
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `BACKUP_S3_BUCKET` | S3 bucket name for backups |
+| `BACKUP_S3_ENDPOINT` | _(optional)_ Custom endpoint for Cloudflare R2 / MinIO |
+| `BACKUP_RETAIN_DAYS` | Number of daily backups to keep (default: `30`) |
+| `AWS_ACCESS_KEY_ID` | S3 access key |
+| `AWS_SECRET_ACCESS_KEY` | S3 secret key |
+| `AWS_REGION` | S3 region (default: `us-east-1`) |
+
+### Run a manual backup
+
+```bash
+pnpm --filter api db:backup
+```
+
+### Restore from a backup
+
+1. Find the backup filename in your S3 bucket under the `backups/` prefix, e.g. `swyft-backup-20240101T020000Z.sql.gz`.
+2. Run the restore script, passing the filename:
+
+```bash
+pnpm --filter api db:restore --file swyft-backup-20240101T020000Z.sql.gz
+```
+
+The script downloads the file from S3, decompresses it, and pipes it into `psql` against `DATABASE_URL`.
+
+> **Warning:** The restore script replays the dump against the live database. Run it against a fresh or staging database first to validate the backup before restoring production.

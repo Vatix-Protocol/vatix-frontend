@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { CacheModule } from './cache/cache.module';
@@ -8,6 +8,8 @@ import { PoolsModule } from './pools/pools.module';
 import { PositionsModule } from './positions/positions.module';
 import { SwapsModule } from './swaps/swaps.module';
 import { IndexerModule } from './indexer/indexer.module';
+import { StatsModule } from './stats/stats.module';
+import { LoggingMiddleware } from './logging/logging.middleware';
 
 @Module({
   imports: [
@@ -18,8 +20,13 @@ import { IndexerModule } from './indexer/indexer.module';
     SwapsModule,
     HorizonModule,
     IndexerModule,
+    StatsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggingMiddleware).forRoutes('*');
+  }
+}
