@@ -77,3 +77,19 @@ model FeesCollected {
 
   @@map("fees_collected")
 }
+
+model Pool {
+  id           String   @id @default(cuid())
+  poolId       String   @unique
+  tokenA       String
+  tokenB       String
+  feeTier      String
+  tvl          Float    @default(0)
+  volume24h    Float    @default(0)
+  volume7d     Float    @default(0)
+  feeApr       Float    @default(0)
+  currentPrice Float    @default(0)
+  updatedAt    DateTime @updatedAt
+
+  @@map("pool")
+}

@@ -20,13 +20,16 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
-    "db:push": "prisma db push"
+    "db:push": "prisma db push",
+    "db:backup": "bash scripts/db-backup.sh",
+    "db:restore": "bash scripts/db-restore.sh"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-ws": "^11.1.17",
+    "@nestjs/schedule": "^4.0.0",
     "@nestjs/websockets": "^11.1.17",
     "@prisma/client": "^5.22.0",
     "@stellar/stellar-sdk": "^13.1.0",
